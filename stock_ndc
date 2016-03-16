@@ -1,0 +1,21 @@
+select product_id,
+	   old_koitem,
+	   complete_name as location,
+	   name product_name,
+       sum(qty) as stock_ndc 
+from
+(
+select 	sl.complete_name,
+		p.old_koitem,
+		p.name,
+		qty,
+		q.location_id,
+		in_date,
+		q.product_id
+from stock_quant q
+left join product_template p on p.id = q.product_id
+left join stock_location sl on sl.id = q.location_id
+where sl.complete_name like 'Physical Locations / NDC / Stock'
+) s
+group by complete_name,name,product_id,old_koitem
+order by product_id asc
