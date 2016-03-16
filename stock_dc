@@ -1,0 +1,19 @@
+select product_id,
+     old_koitem,
+       sum(qty) stock_dc,
+       split_part(complete_name,' ',5) as dc,
+       complete_name location_name,
+       name product_name,
+     split_part(brand,':',2) brand,
+     list_price
+from
+(select p.list_price,pb.name as brand,sl.complete_name,p.old_koitem,p.name,qty,q.location_id,in_date,q.product_id
+
+from stock_quant q
+left join product_template p on p.id = q.product_id
+left join product_brand_product_template_rel zz on zz.product_template_id = p.id
+left join product_brand pb on zz.product_brand_id = pb.id
+left join stock_location sl on sl.id = q.location_id
+where sl.complete_name ilike 'Physical Locations / DC%' and sl.name ilike 'stock%') s
+group by list_price,brand,complete_name,name,split_part(complete_name,' ',5),product_id,old_koitem
+order by product_id asc
