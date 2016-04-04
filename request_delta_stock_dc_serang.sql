@@ -1,5 +1,6 @@
-SELECT b.nama_dagang nama_dagang_dari,b.kode_item_lama kode_item_lama_dari,b.kode_item_baru kode_item_baru_dari,b.lokasi_sumber,b.state state_dari,
-	   c.nama_dagang nama_dagang_ke ,c.kode_item_lama kode_item_lama_ke,c.kode_item_baru kode_item_baru_ke,c.lokasi_tujuan,c.state state_ke,
+SELECT b.nama_dagang nama_dagang_keluar,b.kode_item_lama kode_item_lama_keluar,b.kode_item_baru kode_item_baru_keluar,b.lokasi_sumber,b.state state_keluar,
+	   c.nama_dagang nama_dagang_masuk ,c.kode_item_lama kode_item_lama_masuk,c.kode_item_baru kode_item_baru_masuk,c.lokasi_tujuan,c.state state_masuk,
+       coalesce(b.quantity,0) as quantity_keluar,coalesce(c.quantity,0) as quantity_masuk,
 	   coalesce(c.quantity,0)-coalesce(b.quantity,0) as delta_quantity
 FROM 
 (select a.nama_dagang,a.kode_item_lama,a.kode_item_baru,a.lokasi_sumber,a.state,
