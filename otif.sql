@@ -1,48 +1,350 @@
 SELECT 
-        so.name as noso,
-        date_order,
-        split_part(dc.name,' ',2) as dc,
-        cus.name as customer,
-		cus.id   as customer_id,
-        cus.street as street,
-        cus.district as kecamatan,
-        cus.sub_district as kelurahan,
-        dch.name as channel,
-        oo.name as kode_tipe_outlet,
-        oc.name as jenis_outlet,
-        aa.name as area,
-        pc.name as cara_bayar,
-        s.name as salesname,
-        om.name as order_method,
-        war.name as warehouse,
-        split_part(pb.name,':',2) as brand,
-        pt.old_koitem as coitem,
-        concat('[',sol.product_id,'] ',pt.name) as product,
-        sol.product_id as product_id,
-        sol.product_uom_qty as ordered_quantity,
-        sol.qty_delivered as delivered_quantity,
-        sol.qty_invoiced as invoiced_quantity,
-        sol.customer_lead as delivery_lead_time,
-        sol.price_unit as unit_price,
-        sol.price_after_discounts as price_after_discounts,
-        sol.price_subtotal as price_subtotal,
-        sol.invoice_status as invoice_status,
-        sol.qty_to_invoice as qty_to_invoice,
-        sol.qty_returned as qty_returned,
-        sol.state as state
-FROM 
-sale_order so
-left join res_partner dc on so.dc_id = dc.id
-left join res_partner cus on so.partner_id = cus.id
-left join payment_category pc on cus.payment_category = pc.id
-left join distribution_channel dch on dch.id = cus.distribution_channel
-left join outlet_outlet oo on oo.id = cus.outlet_type
-left join outlet_category oc on oc.id = cus.outlet_category
-left join area_area aa on aa.id = cus.area
-left join res_partner s on so.sales_id = s.id
-left join stock_warehouse war on so.warehouse_id = war.id
-left join order_method om on so.order_method = om.id
-left join sale_order_line sol on so.id = sol.order_id
-left join product_template pt on sol.product_id = pt.id
-left join product_brand_product_template_rel pbpt on pt.id = pbpt.product_template_id
-left join product_brand pb on pbpt.product_brand_id = pb.id
+noso,
+date_order,
+dc,
+customer,
+salesname,
+order_method,
+brand,
+coitem,
+product_id,
+ordered_quantity,
+delivered_quantity,
+invoiced_quantity,
+unit_price,
+price_after_discounts,
+price_subtotal,
+invoice_status,
+qty_to_invoice,
+qty_returned,
+state,
+warehouse,
+street,
+kecamatan,
+kelurahan,
+channel,
+kode_tipe_outlet,
+jenis_outlet,
+area,
+cara_bayar,
+kat1,
+kat2,
+product,
+leadtime,
+date_invoice,
+case when invoiced_quantity is null then 1 else 0
+end as kosong,
+case when date_invoice is not null then 
+                         case when (
+                                    date_invoice > (date_order + coalesce(leadtime,1) * interval '1 day') +  
+
+                                                            (
+                                                              (select count(tanggal) from dim_hol where tanggal between date_order and date_order + (coalesce(leadtime,1) * interval '1 day')
+                                                              ) * interval '1 day'
+                                                            ) +
+                                                            (
+                                                              (select count(*) from dim_time 
+                                                                 where 
+                                                                 (date between date_order and date_invoice + 
+                                                                  (coalesce(leadtime,1) * interval '1 day') 
+                                                                  ) 
+                                                                  and 
+                                                                 day_name like 'Sunday'
+                                                              ) * interval '1 day' 
+                                                            )
+
+                                    ) and (invoiced_quantity < ordered_quantity) then 0
+                              when (date_invoice <= (date_order + coalesce(leadtime,1) * interval '1 day') +  
+
+                                                            (
+                                                              (select count(tanggal) from dim_hol where tanggal between date_order and date_order + (coalesce(leadtime,1) * interval '1 day')
+                                                              ) * interval '1 day'
+                                                            ) +
+                                                            (
+                                                              (select count(*) from dim_time 
+                                                                 where 
+                                                                 (date between date_order and date_order + 
+                                                                  (coalesce(leadtime,1) * interval '1 day') 
+                                                                  ) 
+                                                                  and 
+                                                                 day_name like 'Sunday'
+                                                              ) * interval '1 day' 
+                                                            )
+
+                                    ) and (invoiced_quantity < ordered_quantity) then 1 else 0 end
+     when date_invoice is null then
+     case when current_date <= (rp_co_faktur.tglbon + coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') +  
+
+                                                            (
+                                                              (select count(tanggal) from dim_hol where tanggal between rp_co_faktur.tglbon and rp_co_faktur.tglbon + (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day')
+                                                              ) * interval '1 day'
+                                                            ) +
+                                                            (
+                                                              (select count(*) from dim_time 
+                                                                 where 
+                                                                 (date between rp_co_faktur.tglbon and rp_co_faktur.tglbon + 
+                                                                  (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') 
+                                                                  ) 
+                                                                  and 
+                                                                 day_name like 'Sunday'
+                                                              ) * interval '1 day' 
+                                                            ) and (rp_co_faktur.qtydipesan_faktur < rp_co_faktur.qtydipesan_co)
+                                then 1
+           when current_date > (rp_co_faktur.tglbon + coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') +  
+
+                                                            (
+                                                              (select count(tanggal) from dim_hol where tanggal between rp_co_faktur.tglbon and rp_co_faktur.tglbon + (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day')
+                                                              ) * interval '1 day'
+                                                            ) +
+                                                            (
+                                                              (select count(*) from dim_time 
+                                                                 where 
+                                                                 (date between rp_co_faktur.tglbon and rp_co_faktur.tglbon + 
+                                                                  (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') 
+                                                                  ) 
+                                                                  and 
+                                                                 day_name like 'Sunday'
+                                                              ) * interval '1 day' 
+                                                            ) and (rp_co_faktur.qtydipesan_faktur < rp_co_faktur.qtydipesan_co)
+                                then 0
+
+          else 0 
+    end
+    else 0
+ end as ontime,
+ case when rp_co_faktur.tglserah is not null then 
+               
+                         case when (rp_co_faktur.tglserah > (rp_co_faktur.tglbon + coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') +  
+
+                                                            (
+                                                              (select count(tanggal) from dim_hol where tanggal between rp_co_faktur.tglbon and rp_co_faktur.tglbon + (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day')
+                                                              ) * interval '1 day'
+                                                            ) +
+                                                            (
+                                                              (select count(*) from dim_time 
+                                                                 where 
+                                                                 (date between rp_co_faktur.tglbon and rp_co_faktur.tglbon + 
+                                                                  (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') 
+                                                                  ) 
+                                                                  and 
+                                                                 day_name like 'Sunday'
+                                                              ) * interval '1 day' 
+                                                            )) and (rp_co_faktur.qtydipesan_faktur >= rp_co_faktur.qtydipesan_co) then 0
+                              when (rp_co_faktur.tglserah <= (rp_co_faktur.tglbon + coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') +  
+
+                                                            (
+                                                              (select count(tanggal) from dim_hol where tanggal between rp_co_faktur.tglbon and rp_co_faktur.tglbon + (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day')
+                                                              ) * interval '1 day'
+                                                            ) +
+                                                            (
+                                                              (select count(*) from dim_time 
+                                                                 where 
+                                                                 (date between rp_co_faktur.tglbon and rp_co_faktur.tglbon + 
+                                                                  (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') 
+                                                                  ) 
+                                                                  and 
+                                                                 day_name like 'Sunday'
+                                                              ) * interval '1 day' 
+                                                            )) and (rp_co_faktur.qtydipesan_faktur >= rp_co_faktur.qtydipesan_co) then 1 else 0 end
+          
+
+       when rp_co_faktur.tglserah is null then 
+
+          case when current_date <= (rp_co_faktur.tglbon + coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') +  
+
+                                                            (
+                                                              (select count(tanggal) from dim_hol where tanggal between rp_co_faktur.tglbon and rp_co_faktur.tglbon + (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day')
+                                                              ) * interval '1 day'
+                                                            ) +
+                                                            (
+                                                              (select count(*) from dim_time 
+                                                                 where 
+                                                                 (date between rp_co_faktur.tglbon and rp_co_faktur.tglbon + 
+                                                                  (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') 
+                                                                  ) 
+                                                                  and 
+                                                                 day_name like 'Sunday'
+                                                              ) * interval '1 day' 
+                                                            ) and (rp_co_faktur.qtydipesan_faktur >= rp_co_faktur.qtydipesan_co) then 1
+          else 0 
+          end
+      else 0
+ end as otif,
+case when current_date <= (rp_co_faktur.tglbon + coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') +  
+
+                                                            (
+                                                              (select count(tanggal) from dim_hol where tanggal between rp_co_faktur.tglbon and rp_co_faktur.tglcor + (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day')
+                                                              ) * interval '1 day'
+                                                            ) +
+                                                            (
+                                                              (select count(*) from dim_time 
+                                                                 where 
+                                                                 (date between rp_co_faktur.tglbon and rp_co_faktur.tglbon + 
+                                                                  (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') 
+                                                                  ) 
+                                                                  and 
+                                                                 day_name like 'Sunday'
+                                                              ) * interval '1 day' 
+                                                            ) then 
+     (case when tglbon is null then 'PB' 
+           when tglkirim is null and tglbon is not null then 'PK' 
+           when tglserah is null and tglkirim is not null and tglbon is not null then 'PS'
+           when tglserah is not null then 'C'
+      end
+      ) 
+     when current_date > (rp_co_faktur.tglbon + coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') +  
+
+                                                            (
+                                                              (select count(tanggal) from dim_hol where tanggal between rp_co_faktur.tglbon and rp_co_faktur.tglbon + (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day')
+                                                              ) * interval '1 day'
+                                                            ) +
+                                                            (
+                                                              (select count(*) from dim_time 
+                                                                 where 
+                                                                 (date between rp_co_faktur.tglbon and rp_co_faktur.tglbon + 
+                                                                  (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') 
+                                                                  ) 
+                                                                  and 
+                                                                 day_name like 'Sunday'
+                                                              ) * interval '1 day' 
+                                                            ) then 'C'
+     else 'C' end as status,
+case when rp_co_faktur.tglserah is not null then 
+                         case when (
+                                    rp_co_faktur.tglserah > (rp_co_faktur.tglbon + coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') +  
+
+                                                            (
+                                                              (select count(tanggal) from dim_hol where tanggal between rp_co_faktur.tglbon and rp_co_faktur.tglbon + (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day')
+                                                              ) * interval '1 day'
+                                                            ) +
+                                                            (
+                                                              (select count(*) from dim_time 
+                                                                 where 
+                                                                 (date between rp_co_faktur.tglbon and rp_co_faktur.tglbon + 
+                                                                  (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') 
+                                                                  ) 
+                                                                  and 
+                                                                 day_name like 'Sunday'
+                                                              ) * interval '1 day' 
+                                                            )
+
+                                    ) and (rp_co_faktur.qtydipesan_faktur >= rp_co_faktur.qtydipesan_co) then 1
+                              when (rp_co_faktur.tglserah <= (rp_co_faktur.tglbon + coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') +  
+
+                                                            (
+                                                              (select count(tanggal) from dim_hol where tanggal between rp_co_faktur.tglbon and rp_co_faktur.tglbon + (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day')
+                                                              ) * interval '1 day'
+                                                            ) +
+                                                            (
+                                                              (select count(*) from dim_time 
+                                                                 where 
+                                                                 (date between rp_co_faktur.tglbon and rp_co_faktur.tglbon + 
+                                                                  (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') 
+                                                                  ) 
+                                                                  and 
+                                                                 day_name like 'Sunday'
+                                                              ) * interval '1 day' 
+                                                            )
+
+                                    ) and (rp_co_faktur.qtydipesan_faktur >= rp_co_faktur.qtydipesan_co) then 0 else 0 end
+
+     when rp_co_faktur.tglserah is null then
+     case when current_date > (rp_co_faktur.tglbon + coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') +  
+
+                                                            (
+                                                              (select count(tanggal) from dim_hol where tanggal between rp_co_faktur.tglbon and rp_co_faktur.tglbon + (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day')
+                                                              ) * interval '1 day'
+                                                            ) +
+                                                            (
+                                                              (select count(*) from dim_time 
+                                                                 where 
+                                                                 (date between rp_co_faktur.tglbon and rp_co_faktur.tglbon + 
+                                                                  (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') 
+                                                                  ) 
+                                                                  and 
+                                                                 day_name like 'Sunday'
+                                                              ) * interval '1 day' 
+                                                            ) and (rp_co_faktur.qtydipesan_faktur >= rp_co_faktur.qtydipesan_co)
+                                then 1
+           when current_date <= (rp_co_faktur.tglbon + coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') +  
+
+                                                            (
+                                                              (select count(tanggal) from dim_hol where tanggal between rp_co_faktur.tglbon and rp_co_faktur.tglbon + (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day')
+                                                              ) * interval '1 day'
+                                                            ) +
+                                                            (
+                                                              (select count(*) from dim_time 
+                                                                 where 
+                                                                 (date between rp_co_faktur.tglbon and rp_co_faktur.tglbon + 
+                                                                  (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') 
+                                                                  ) 
+                                                                  and 
+                                                                 day_name like 'Sunday'
+                                                              ) * interval '1 day' 
+                                                            ) and (rp_co_faktur.qtydipesan_faktur >= rp_co_faktur.qtydipesan_co)
+                                then 0
+
+          else 0 
+    end
+    else 0
+ end as infull,
+ case when rp_co_faktur.tglserah is not null then 
+               
+                         case when (rp_co_faktur.tglserah > (rp_co_faktur.tglbon + coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') +  
+
+                                                            (
+                                                              (select count(tanggal) from dim_hol where tanggal between rp_co_faktur.tglbon and rp_co_faktur.tglbon + (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day')
+                                                              ) * interval '1 day'
+                                                            ) +
+                                                            (
+                                                              (select count(*) from dim_time 
+                                                                 where 
+                                                                 (date between rp_co_faktur.tglbon and rp_co_faktur.tglbon + 
+                                                                  (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') 
+                                                                  ) 
+                                                                  and 
+                                                                 day_name like 'Sunday'
+                                                              ) * interval '1 day' 
+                                                            )) and (rp_co_faktur.qtydipesan_faktur < rp_co_faktur.qtydipesan_co) then 1
+                              when (rp_co_faktur.tglserah <= (rp_co_faktur.tglbon + coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') +  
+
+                                                            (
+                                                              (select count(tanggal) from dim_hol where tanggal between rp_co_faktur.tglbon and rp_co_faktur.tglbon + (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day')
+                                                              ) * interval '1 day'
+                                                            ) +
+                                                            (
+                                                              (select count(*) from dim_time 
+                                                                 where 
+                                                                 (date between rp_co_faktur.tglbon and rp_co_faktur.tglbon + 
+                                                                  (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') 
+                                                                  ) 
+                                                                  and 
+                                                                 day_name like 'Sunday'
+                                                              ) * interval '1 day' 
+                                                            )) and (rp_co_faktur.qtydipesan_faktur > rp_co_faktur.qtydipesan_co) then 0 else 0 end
+          
+
+       when rp_co_faktur.tglserah is null then 
+
+          case when current_date > (rp_co_faktur.tglbon + coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') +  
+
+                                                            (
+                                                              (select count(tanggal) from dim_hol where tanggal between rp_co_faktur.tglbon and rp_co_faktur.tglbon + (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day')
+                                                              ) * interval '1 day'
+                                                            ) +
+                                                            (
+                                                              (select count(*) from dim_time 
+                                                                 where 
+                                                                 (date between rp_co_faktur.tglbon and rp_co_faktur.tglbon + 
+                                                                  (coalesce(rp_pelangga_area.leadtime,1) * interval '1 day') 
+                                                                  ) 
+                                                                  and 
+                                                                 day_name like 'Sunday'
+                                                              ) * interval '1 day' 
+                                                            ) and (rp_co_faktur.qtydipesan_faktur < rp_co_faktur.qtydipesan_co) then 1
+          else 0 
+          end
+      else 0
+ end as failotif
+
+FROM o_sales_order_report_otif of
