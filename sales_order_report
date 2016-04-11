@@ -3,7 +3,7 @@ SELECT
         date_order,
         split_part(dc.name,' ',2) as dc,
         case when cus.is_consignment = 't' then 'Consignment'
-        when cus.is_consignment = 'f' then 'Direct' end as jenis_penjualan,
+        else 'Direct' end as jenis_penjualan,
         cus.name as customer,
 		cus.id   as customer_id,
         cus.street as street,
@@ -26,8 +26,7 @@ SELECT
         sol.qty_invoiced as invoiced_quantity,
         sol.customer_lead as delivery_lead_time,
         sol.price_unit as unit_price_net,
-        round(cast(sol.price_after_discounts as numeric),2) as price_after_discounts,
-        sol.price_subtotal as price_subtotal,
+        sol.price_reduce,
         sol.invoice_status as invoice_status,
         sol.qty_to_invoice as qty_to_invoice,
         sol.qty_returned as qty_returned,
@@ -58,5 +57,3 @@ left join sale_order_line sol on so.id = sol.order_id
 left join product_template pt on sol.product_id = pt.id
 left join product_brand_product_template_rel pbpt on pt.id = pbpt.product_template_id
 left join product_brand pb on pbpt.product_brand_id = pb.id
-
-where so.name='SO212'
