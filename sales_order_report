@@ -19,7 +19,7 @@ SELECT
         war.name as warehouse,
         split_part(pb.name,':',2) as brand,
         pt.old_koitem as coitem,
-        concat('[',sol.product_id,'] ',pt.name) as product,
+        sol.name as product,
         sol.product_id as product_id,
         sol.product_uom_qty as ordered_quantity,
         sol.qty_delivered as delivered_quantity,
@@ -58,3 +58,5 @@ left join sale_order_line sol on so.id = sol.order_id
 left join product_template pt on sol.product_id = pt.id
 left join product_brand_product_template_rel pbpt on pt.id = pbpt.product_template_id
 left join product_brand pb on pbpt.product_brand_id = pb.id
+
+where so.name='SO212'
